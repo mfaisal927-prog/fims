@@ -57,12 +57,12 @@ export default async function FinanceDetailPage({ params }: { params: Promise<{ 
     };
 
     if (payrollRun) {
-        let totalPayable = payrollRun.records.reduce((acc, r) => acc + r.payable_pkr, 0);
-        let totalPaid = payrollRun.records.reduce((acc, r) => acc + r.paid_pkr, 0);
+        let totalPayable = payrollRun.records.reduce((acc: number, r: any) => acc + (r.payable_pkr || 0), 0);
+        let totalPaid = payrollRun.records.reduce((acc: number, r: any) => acc + (r.paid_pkr || 0), 0);
 
         // Include Adjustments in the totals
         if (payrollRun.adjustments) {
-            payrollRun.adjustments.forEach(adj => {
+            payrollRun.adjustments.forEach((adj: any) => {
                 if (adj.type === 'Bonus') {
                     totalPayable += adj.amount;
                 } else if (adj.type === 'Deduction') {

@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         orderBy: { recipient: { name: 'asc' } }
     });
 
-    const totalDistributed = distributions.reduce((sum, d) => sum + d.amount, 0);
+    const totalDistributed = distributions.reduce((sum, d) => sum + d.allocated_amount_pkr, 0);
     const remainingBalance = silsilaTotal - totalDistributed;
 
     // Build CSV
@@ -58,8 +58,8 @@ export async function GET(request: Request) {
         rows.push([
             `"${d.recipient.name.replace(/"/g, '""')}"`,
             `"${d.recipient.category.replace(/"/g, '""')}"`,
-            d.amount.toFixed(2),
-            d.is_paid ? "Paid" : "Unpaid",
+            d.allocated_amount_pkr.toFixed(2),
+            d.status === "PAID" ? "Paid" : (d.status === "PARTIAL" ? "Partial" : "Unpaid"),
             d.payment_date ? d.payment_date.toISOString().split('T')[0] : "",
             `"${d.notes ? d.notes.replace(/"/g, '""') : ""}"`
         ]);
