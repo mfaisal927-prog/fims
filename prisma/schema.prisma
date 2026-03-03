@@ -11,10 +11,15 @@ datasource db {
 }
 
 model Admin {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  
+  is_verified Boolean   @default(false)
+  otp         String?
+  otp_expiry  DateTime?
+
+  createdAt   DateTime  @default(now())
 }
 
 model Member {
