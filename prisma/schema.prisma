@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Member {
+  id          String   @id @default(cuid())
+  full_name   String
+  details     String?
+  phone_email String?
+  status      String   @default("active") // active or inactive
+  createdAt   DateTime @default(now())
+
+  // Relations
+  websites       Website[]
+  payrollRecords PayrollRecord[]
+  adjustments    PayrollAdjustment[]
+}
+
+model Website {
+  id               String   @id @default(cuid())
+  member_id        String?
+  website_name     String   @unique
+  percentage_share Float    @default(0)
+  status           String   @default("active") // active or inactive
+  createdAt        DateTime @default(now())
+
+  // Relations
+  member         Member?         @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  payrollRecords PayrollRecord[]
+}
+
+model PayrollRun {
+  id              String    @id @default(cuid())
+  month           String    @unique // format YYYY-MM
+  usd_to_pkr_rate Float
+  status          String    @default("draft") // draft or final
+  finalized_at    DateTime?
+  reopened_at     DateTime?
+  reopen_reason   String?
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  records      PayrollRecord[]
+  adjustments  PayrollAdjustment[]
+}
+
+model PayrollRecord {
+  id             String @id @default(cuid())
+  payroll_run_id String
+  member_id      String
+  website_id     String
+
+  site          String
+  usd_amount    Float
+  usd_rate      Float
+  total_pkr     Float
+  percentage    Float
+  payable_pkr   Float
+  paid_pkr      Float @default(0)
+  remaining_pkr Float
+
+  // Relations
+  payrollRun PayrollRun @relation(fields: [payroll_run_id], references: [id], onDelete: Cascade)
+  member     Member     @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  website    Website    @relation(fields: [website_id], references: [id], onDelete: Cascade)
+
+  @@unique([payroll_run_id, website_id])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actor       String   @default("admin")
+  action_type String
+  entity_type String
+  entity_id   String?
+  month       String?
+  details     String?  // JSON string
+  createdAt   DateTime @default(now())
+}
+
+model Settings {
+  id                 String   @id @default(cuid())
+  company_name       String   @default("My Company")
+  company_logo       String?
+  
+  // Silsila feature settings
+  silsila_enabled    Boolean  @default(false)
+  silsila_base       String   @default("net_balance") // "net_balance" or "bank_received"
+  silsila_percentage Int      @default(33)
+
+  updatedAt          DateTime @updatedAt
+}
+
+model SilsilaRecipient {
+  id            String   @id @default(cuid())
+  name          String
+  category      String
+  phone         String?
+  default_share Float?
+  fixed_amount  Float?
+  createdAt     DateTime @default(now())
+
+  distributions SilsilaDistribution[]
+}
+
+model SilsilaDistribution {
+  id                   String   @id @default(cuid())
+  month                String   // format YYYY-MM
+  allocated_amount_pkr Float    @default(0)
+  paid_amount_pkr      Float    @default(0)
+  status               String   @default("PENDING") // PENDING, PARTIAL, PAID
+  payment_date         DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  recipient_id String
+  recipient    SilsilaRecipient @relation(fields: [recipient_id], references: [id], onDelete: Cascade)
+
+  @@index([month])
+}
+
+model FinanceRecord {
+  id               String    @id @default(cuid())
+  month            String    @unique // format YYYY-MM
+  bank_received    Float     @default(0)
+  bank_tax         Float     @default(0)
+  bank_tax_percent Float?
+  net_after_tax    Float     @default(0)
+  manual_salary_paid_pkr Float @default(0)
+  manual_salary_note     String?
+  notes            String?
+  is_deleted       Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  expenses      Expense[]
+}
+
+model Expense {
+  id                String        @id @default(cuid())
+  finance_record_id String
+  expense_type      String        // Hosting / VPS / Domain / CDN / Other
+  amount            Float
+  date              DateTime
+  notes             String?
+  createdAt         DateTime      @default(now())
+
+  financeRecord     FinanceRecord @relation(fields: [finance_record_id], references: [id], onDelete: Cascade)
+
+  @@index([finance_record_id])
+}
+
+model PayrollAdjustment {
+  id              String   @id @default(cuid())
+  payroll_run_id  String
+  member_id       String
+  type            String   // Bonus | Extra Payment | Deduction | Manual Override
+  amount          Float
+  note            String
+  createdAt       DateTime @default(now())
+
+  // Relations
+  payrollRun      PayrollRun @relation(fields: [payroll_run_id], references: [id], onDelete: Cascade)
+  member          Member     @relation(fields: [member_id], references: [id], onDelete: Cascade)
+
+  @@index([payroll_run_id])
+  @@index([member_id])
+}
